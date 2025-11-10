@@ -33,9 +33,9 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: mypassword
-          POSTGRES_DB: todo_api_test
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
         ports:
           - 5432:5432
         options: >-
@@ -56,11 +56,11 @@ jobs:
 
     env:
       RAILS_ENV: test
-      POSTGRES_HOST: postgres         # 👈 must match service name
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: mypassword   # 👈 match your local env
-      POSTGRES_DB: todo_api_test
-      DATABASE_URL: postgres://postgres:mypassword@postgres:5432/todo_api_test
+      POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}      # 👈 must match service name
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}  # 👈 match your local env
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      DATABASE_URL: postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@${{ secrets.POSTGRES_HOST }}:5432/${{ secrets.POSTGRES_DB }}
       REDIS_URL: redis://redis:6379/0
 
     steps:
