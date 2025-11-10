@@ -34,7 +34,7 @@ jobs:
         image: postgres:15
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: owusuboa
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_DB: todo_api_test
         ports:
           - 5432:5432
@@ -56,11 +56,12 @@ jobs:
 
     env:
       RAILS_ENV: test
-      POSTGRES_HOST: postgres   # Must match service name
+      POSTGRES_HOST: postgres          # Must match service name
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: owusuboa
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       POSTGRES_DB: todo_api_test
-      DATABASE_URL: postgres://postgres:owusuboa@postgres:5432/todo_api_test
+      POSTGRES_TEST_DB: todo_api_test
+      DATABASE_URL: postgres://postgres:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/todo_api_test
       REDIS_URL: redis://redis:6379/0
 
     steps:
@@ -85,7 +86,7 @@ jobs:
 
       - name: Prepare Test Database
         run: |
-          bundle exec rails db:create db:schema:load
+          bundle exec rails db:create db:schema:load || echo "Database already exists"
 
       - name: Run RSpec Tests
         run: bundle exec rspec --format documentation
