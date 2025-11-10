@@ -12,7 +12,10 @@ development:
 
 test:
   <<: *default
-  database: todo_api_test
+  database: <%= ENV.fetch("POSTGRES_TEST_DB", "todo_api_test") %>
+  username: <%= ENV.fetch("POSTGRES_USER", "postgres") %>
+  password: <%= ENV.fetch("POSTGRES_PASSWORD", "password") %>
+  host: <%= ENV.fetch("POSTGRES_HOST", "localhost") %>
 
 production:
   url: <%= ENV["DATABASE_URL"] %>
