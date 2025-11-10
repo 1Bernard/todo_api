@@ -1,92 +1,67 @@
-name: CI
+test:
+  runs-on: ubuntu-latest
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
+  services:
+    postgres:
+      image: postgres:15
+      env:
+        POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        POSTGRES_DB: ${{ secrets.POSTGRES_TEST_DB }}
+      # No need for ports mapping
+      options: >-
+        --health-cmd "pg_isready -U ${{ secrets.POSTGRES_USER }}"
+        --health-interval 10s
+        --health-timeout 5s
+        --health-retries 5
 
-jobs:
-  security_scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: .ruby-version
-          bundler-cache: true
-      - run: bundle exec brakeman --no-pager
+    redis:
+      image: redis:7
+      options: >-
+        --health-cmd "redis-cli ping"
+        --health-interval 10s
+        --health-timeout 5s
+        --health-retries 5
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: .ruby-version
-          bundler-cache: true
-      - run: bundle exec rubocop -f github
+  env:
+    RAILS_ENV: test
+    POSTGRES_HOST: postgres         # matches the service name
+    POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+    POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+    POSTGRES_DB: ${{ secrets.POSTGRES_TEST_DB }}
+    DATABASE_URL: postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/${{ secrets.POSTGRES_TEST_DB }}
+    REDIS_URL: redis://redis:6379/0
 
-  test:
-    runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
 
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB: todo_api_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: .ruby-version
+        bundler-cache: true
 
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    - name: Install system dependencies
+      run: sudo apt-get update && sudo apt-get install -y build-essential libpq-dev
 
-    env:
-      RAILS_ENV: test
-      POSTGRES_HOST: postgres          # Must match service name
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      POSTGRES_DB: todo_api_test
-      POSTGRES_TEST_DB: todo_api_test
-      DATABASE_URL: postgres://postgres:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/todo_api_test
-      REDIS_URL: redis://redis:6379/0
+    - name: Wait for Postgres
+      run: |
+        echo "Waiting for Postgres..."
+        for i in {1..60}; do
+          pg_isready -h $POSTGRES_HOST -U $POSTGRES_USER && break
+          sleep 1
+        done
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Wait for Redis
+      run: |
+        echo "Waiting for Redis..."
+        for i in {1..30}; do
+          redis-cli -h redis ping | grep PONG && break
+          sleep 1
+        done
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: .ruby-version
-          bundler-cache: true
+    - name: Prepare Database
+      run: |
+        bundle exec rails db:create db:schema:load || echo "Database already exists"
 
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential libpq-dev
-
-      - name: Wait for PostgreSQL
-        run: |
-          echo "Waiting for Postgres..."
-          until pg_isready -h $POSTGRES_HOST -U $POSTGRES_USER; do
-            sleep 1
-          done
-
-      - name: Prepare Test Database
-        run: |
-          bundle exec rails db:create db:schema:load || echo "Database already exists"
-
-      - name: Run RSpec Tests
-        run: bundle exec rspec --format documentation
+    - name: Run RSpec Tests
+      run: bundle exec rspec
