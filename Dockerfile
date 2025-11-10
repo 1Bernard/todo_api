@@ -1,39 +1,45 @@
 # syntax=docker/dockerfile:1
-
-# Use the same Ruby version as in .ruby-version
 ARG RUBY_VERSION=3.4.7
 FROM ruby:${RUBY_VERSION}
 
-# Set working directory inside the container
 WORKDIR /app
 
-# Install dependencies
+# Install system dependencies
 RUN apt-get update -qq && apt-get install -y \
   build-essential \
   libpq-dev \
   nodejs \
   postgresql-client \
   curl \
+  git \
+  netcat-openbsd \
   && rm -rf /var/lib/apt/lists/*
 
 # Install bundler
 RUN gem install bundler
 
-# Copy Gemfile and Gemfile.lock first to leverage Docker caching
+# Copy Gemfiles first for caching
 COPY Gemfile Gemfile.lock ./
 
-# Install gems
-RUN bundle install
+# Configure Bundler to skip development/test for production
+RUN bundle config set without 'development test' \
+ && bundle install --jobs 4
 
-# Copy the rest of the app code
+# Copy the rest of the app
 COPY . .
 
-# Expose port 3000 for Rails server
+# Copy entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Expose Rails port
 EXPOSE 3000
 
 # Set environment variables
-ENV RAILS_ENV=development \
-    BUNDLE_PATH=/usr/local/bundle
+ENV RAILS_ENV=production \
+    BUNDLE_PATH=/usr/local/bundle \
+    REDIS_URL=redis://redis:6379/0 \
+    RAILS_LOG_TO_STDOUT=true
 
-# Default command (can be overridden in docker-compose)
-CMD ["bash", "-c", "bundle exec rails s -b 0.0.0.0 -p 3000"]
+# Use entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]

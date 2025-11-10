@@ -34,7 +34,7 @@ gem 'prawn-table', '~> 0.2.2'
 gem 'ransack', '~> 4.4', '>= 4.4.1'
 
 group :development, :test do
-  gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
+  gem "debug", platforms: %i[ mri windows ]
   gem "brakeman", require: false
   gem 'rspec-rails', '~> 8.0', '>= 8.0.2'
   gem 'factory_bot_rails', '~> 6.5', '>= 6.5.1'

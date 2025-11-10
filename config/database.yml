@@ -15,7 +15,5 @@ test:
   database: todo_api_test
 
 production:
-  <<: *default
-  database: todo_api_production
-  username: <%= ENV["POSTGRES_USER"] %>
-  password: <%= ENV["POSTGRES_PASSWORD"] %>
+  url: <%= ENV["DATABASE_URL"] %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
