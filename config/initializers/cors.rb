@@ -7,11 +7,11 @@
 
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
-    origins ENV.fetch('ALLOWED_ORIGINS', 'localhost:3000,127.0.0.1:3000').split(',')
-    resource '*',
+    origins ENV.fetch("ALLOWED_ORIGINS", "localhost:3000,127.0.0.1:3000").split(",")
+    resource "*",
       headers: :any,
-      methods: [:get, :post, :put, :patch, :delete, :options, :head],
-      expose: ['Authorization', 'X-Page', 'X-Per-Page', 'X-Total'],
+      methods: [ :get, :post, :put, :patch, :delete, :options, :head ],
+      expose: [ "Authorization", "X-Page", "X-Per-Page", "X-Total" ],
       max_age: 600
   end
 end

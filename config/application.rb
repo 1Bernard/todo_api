@@ -26,12 +26,12 @@ module TodoApi
 
     # Solid Queue configuration
     config.active_job.queue_adapter = :solid_queue
-    config.solid_queue.connects_to = { 
+    config.solid_queue.connects_to = {
       database: { writing: Rails.env.production? ? :queue : :primary }
     }
 
     # Session middleware for Action Cable
-    config.session_store :cookie_store, key: '_todo_api_session'
+    config.session_store :cookie_store, key: "_todo_api_session"
     config.middleware.use ActionDispatch::Cookies
     config.middleware.use config.session_store, config.session_options
 
