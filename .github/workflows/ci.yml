@@ -5,36 +5,48 @@ on:
     branches: [ main ]
   pull_request:
 
+env:
+  BUNDLE_PATH: vendor/bundle
+  RAILS_ENV: test
+
 jobs:
   security_scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
+      
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: .ruby-version
           bundler-cache: true
-      - run: bundle exec brakeman --no-pager
+      
+      - name: Run Brakeman Security Scan
+        run: bundle exec brakeman --no-pager --format json
 
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
+      
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: .ruby-version
           bundler-cache: true
-      - run: bundle exec rubocop -f github
+      
+      - name: Run RuboCop
+        run: bundle exec rubocop --format github --parallel
 
   test:
     runs-on: ubuntu-latest
-
+    
     services:
       postgres:
         image: postgres:15
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_PASSWORD: owusuboa  # Matches your .env file
           POSTGRES_DB: todo_api_test
         ports:
           - 5432:5432
@@ -55,14 +67,14 @@ jobs:
           --health-retries 5
 
     env:
-      RAILS_ENV: test
-      POSTGRES_HOST: postgres          # Must match service name
+      POSTGRES_HOST: localhost
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_PASSWORD: owusuboa  # Matches your .env file
       POSTGRES_DB: todo_api_test
-      POSTGRES_TEST_DB: todo_api_test
-      DATABASE_URL: postgres://postgres:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/todo_api_test
-      REDIS_URL: redis://redis:6379/0
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://localhost:6379/0
+      DATABASE_URL: postgres://postgres:owusuboa@localhost:5432/todo_api_test
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
 
     steps:
       - name: Checkout code
@@ -75,18 +87,37 @@ jobs:
           bundler-cache: true
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential libpq-dev
-
-      - name: Wait for PostgreSQL
         run: |
-          echo "Waiting for Postgres..."
-          until pg_isready -h $POSTGRES_HOST -U $POSTGRES_USER; do
-            sleep 1
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential libpq-dev postgresql-client
+
+      - name: Verify PostgreSQL connection
+        run: |
+          echo "Waiting for PostgreSQL..."
+          until pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER; do
+            sleep 2
           done
+          echo "PostgreSQL is ready!"
 
-      - name: Prepare Test Database
+      - name: Verify Redis connection
         run: |
-          bundle exec rails db:create db:schema:load || echo "Database already exists"
+          echo "Waiting for Redis..."
+          until redis-cli -h localhost -p 6379 ping; do
+            sleep 2
+          done
+          echo "Redis is ready!"
 
-      - name: Run RSpec Tests
-        run: bundle exec rspec --format documentation
+      - name: Setup test database
+        run: |
+          bundle exec rails db:create
+          bundle exec rails db:schema:load
+
+      - name: Run RSpec tests
+        run: bundle exec rspec --format documentation --format json --out tmp/rspec_results.json
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results-${{ github.run_id }}
+          path: tmp/rspec_results.json

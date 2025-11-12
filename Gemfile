@@ -42,6 +42,7 @@ group :development, :test do
   gem "faker", "~> 3.5", ">= 3.5.2"
   gem "shoulda-matchers", "~> 7.0", ">= 7.0.1"
   gem "database_cleaner-active_record", "~> 2.2", ">= 2.2.2"
+  gem "dotenv-rails", "~> 3.1", ">= 3.1.8"
 end
 
 group :test do

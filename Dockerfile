@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
 ARG RUBY_VERSION=3.4.7
-FROM ruby:${RUBY_VERSION}
+FROM ruby:${RUBY_VERSION} AS base
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including PostgreSQL client
 RUN apt-get update -qq && apt-get install -y \
   build-essential \
   libpq-dev \
@@ -18,28 +18,29 @@ RUN apt-get update -qq && apt-get install -y \
 # Install bundler
 RUN gem install bundler
 
-# Copy Gemfiles first for caching
+# Copy and install ALL gems (including test for CI)
 COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4
 
-# Configure Bundler to skip development/test for production
-RUN bundle config set without 'development test' \
- && bundle install --jobs 4
-
-# Copy the rest of the app
 COPY . .
 
-# Copy entrypoint script
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Expose Rails port
 EXPOSE 3000
 
-# Set environment variables
+# Add CMD for development - this is what was missing!
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+
+# Production stage (excludes dev/test gems)
+FROM base AS production
+
+RUN bundle config set without 'development test' && \
+    bundle install --jobs 4
+
 ENV RAILS_ENV=production \
     BUNDLE_PATH=/usr/local/bundle \
-    REDIS_URL=redis://redis:6379/0 \
     RAILS_LOG_TO_STDOUT=true
 
-# Use entrypoint script
 ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]

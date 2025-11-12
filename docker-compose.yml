@@ -1,16 +1,21 @@
 services:
-  db:
+  postgres:
     image: postgres:15
-    container_name: todo_db
+    container_name: todo_postgres
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5433:5432" # avoid conflict with local Postgres
+      - "5433:5432"  # Host:Container mapping
     volumes:
-      - ./tmp/db:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7
@@ -18,9 +23,18 @@ services:
     restart: always
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
 
   web:
-    build: .
+    build:
+      context: .
+      target: base
     container_name: todo_api
     volumes:
       - .:/app
@@ -28,15 +42,24 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - db
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      RAILS_ENV: ${RAILS_ENV}
+      RAILS_ENV: ${RAILS_ENV:-development}
+      POSTGRES_HOST: postgres        # ← Explicitly set service name
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: db
       POSTGRES_DB: ${POSTGRES_DB}
-      REDIS_URL: redis://redis:6379/0
+      POSTGRES_PORT: 5432            # ← Explicitly set container port
+      REDIS_URL: redis://redis:6379/0  # ← Explicitly set service name
+    env_file:
+      - .env
+    stdin_open: true
+    tty: true
 
 volumes:
+  postgres_data:
+  redis_data:
   bundle_cache:
