@@ -17,6 +17,7 @@ gem "jwt", "~> 3.1", ">= 3.1.2"
 gem "rotp", "~> 6.3"
 gem "rqrcode", "~> 3.1"
 gem "pundit", "~> 2.5", ">= 2.5.2"
+gem "acts_as_tenant", "~> 1.0", ">= 1.0.1"
 gem "rack-cors", "~> 3.0"
 gem "rack-attack", "~> 6.8"
 
@@ -26,12 +27,31 @@ gem "rswag-api", "~> 2.17"
 gem "rswag-ui", "~> 2.17"
 gem "redis", "~> 5.4", ">= 5.4.1" # For Action Cable & caching
 
+# Stripe Integration
+gem 'stripe', '~> 18.0', '>= 18.0.1'
+gem 'stripe_event', '~> 2.13'
+
+# File Uploads & Processing
+gem "cloudinary", "~> 2.4"
+gem 'image_processing', '~> 1.14'
+
+# Data Management
+gem 'discard', '~> 1.4'
+gem 'paper_trail', '~> 17.0'
+
+# AI & Machine Learning
+gem "ruby-openai", "~> 8.3"
+gem "langchainrb", "~> 0.19.5"
+gem "vectorsearch", "~> 0.1.2"
+
 # PDF Generation
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2.2"
 
-# Search
+# Search & Analytics
 gem "ransack", "~> 4.4", ">= 4.4.1"
+gem "ahoy_matey", "~> 5.4", ">= 5.4.1"
+gem "groupdate", "~> 6.7"
 
 group :development, :test do
   gem "debug", platforms: %i[ mri windows ]
