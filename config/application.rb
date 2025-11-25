@@ -24,20 +24,8 @@ module TodoApi
     config.autoload_lib(ignore: %w[assets tasks])
     config.api_only = true
 
-    # Solid Queue configuration
-    config.active_job.queue_adapter = :solid_queue
-    config.solid_queue.connects_to = {
-      database: { writing: Rails.env.production? ? :queue : :primary }
-    }
-
-    # Session middleware for Action Cable
-    config.session_store :cookie_store, key: "_todo_api_session"
-    config.middleware.use ActionDispatch::Cookies
-    config.middleware.use config.session_store, config.session_options
-
-    # Autoload paths
-    config.autoload_paths += %W[#{config.root}/app/services/**/*]
-    config.autoload_paths += %W[#{config.root}/app/policies/**/*]
-    config.autoload_paths += %W[#{config.root}/app/serializers/**/*]
+    # Autoload paths for features directory
+    config.autoload_paths << "#{config.root}/features"
+    config.eager_load_paths << "#{config.root}/features"
   end
 end
