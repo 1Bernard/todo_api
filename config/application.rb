@@ -27,5 +27,7 @@ module TodoApi
     # Autoload paths for features directory
     config.autoload_paths << "#{config.root}/features"
     config.eager_load_paths << "#{config.root}/features"
+    config.autoload_paths << "#{config.root}/core"
+    config.eager_load_paths << "#{config.root}/core"
   end
 end
